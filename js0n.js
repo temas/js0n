@@ -57,6 +57,7 @@ goStruct[116] = l_bare; // t for true
 goStruct[102] = l_bare; // f for false
 // null
 goStruct[110] = l_bare; // n for null
+goStruct.toString = function() { return "goStruct"; }
 
 // Bare types processing context
 var goBare = new Array(255);
@@ -70,6 +71,7 @@ goBare[44] = l_unbare; // ,
 goBare[93] = l_unbare; // ]
 goBare[125] = l_unbare; // }
 goBare.fill(127, 255, l_bad);
+goBare.toString = function() { return "goBare"; }
 
 // String processing
 var goString = new Array(255);
@@ -83,11 +85,13 @@ goString.fill(192, 223, l_utf8_2);
 goString.fill(224, 239, l_utf8_3);
 goString.fill(240, 247, l_utf8_4);
 goString.fill(248, 255, l_bad);
+goString.toString = function() { return "goString"; }
 
 var goUtf8 = new Array(255);
 goUtf8.fill(0, 127, l_bad);
 goUtf8.fill(128, 191, l_utf_continue);
 goUtf8.fill(192, 255, l_bad);
+goUtf8.toString = function() { return "goUtf8"; }
 
 var goEscape = new Array(255);
 goEscape.fill(0, 255, l_bad);
@@ -100,6 +104,7 @@ goEscape[110] = l_unescape; // n
 goEscape[114] = l_unescape; // r
 goEscape[116] = l_unescape; // t
 goEscape[117] = l_unescape; // u
+goEscape.toString = function() { return "goEscape"; }
 
 
 function js0n(inStr) {
@@ -116,6 +121,7 @@ function js0n(inStr) {
             curValue.type = jst_array;
             curValue.start = curPos;
             curValue.depth = curDepth;
+            curValue.length = 0;
             results.push(curValue);
             curValue = {};
             ++curDepth;
@@ -128,6 +134,7 @@ function js0n(inStr) {
             curValue.type = jst_object;
             curValue.start = curPos;
             curValue.depth = curDepth;
+            curValue.length = 0;
             results.push(curValue);
             curValue = {};
             ++curDepth;
@@ -194,13 +201,17 @@ function js0n(inStr) {
             if (!--utfRemaining) goContext = goString;
             break;
         case l_bad:
-            throw "Invalid JSON";
+            throw {what:"Invalid JSON at ", charCode:inStr.charCodeAt(curPos), character:inStr[curPos],
+                current:curPos, context:goContext};
         };
     }
     return results;
 }
 
 if (process && process.argv[2]) {
+    process.on("uncaughtException", function(E) {
+        console.log(E.what + " at " + E.current + "[" + E.character + ":" + E.charCode + "] in " + E.context.toString());
+    });
     var fileData = require("fs").readFileSync(process.argv[2], "utf8");
     var start = Date.now();
     var results = js0n(fileData);
